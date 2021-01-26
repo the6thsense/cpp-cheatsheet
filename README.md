@@ -429,6 +429,8 @@ for (vector<int>::iterator p=a.begin(); p!=a.end(); ++p)
 vector<int> b(a.begin(), a.end());  // b is copy of a
 vector<T> c(n, x);        // c[0]..c[n-1] init to x
 T d[10]; vector<T> e(d, d+10);      // e is initialized from d
+####trickToReturnVector
+return vector<int>{1,2,3,4,4,5,4};
 ```
 
 ## `deque` (Array stack queue)
