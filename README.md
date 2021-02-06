@@ -303,45 +303,6 @@ N::T t;                     // Use name T in namespace N
 using namespace N;          // Make T visible without N::
 ```
 
-## `memory` (dynamic memory management)
-
-```cpp
-#include <memory>           // Include memory (std namespace)
-shared_ptr<int> x;          // Empty shared_ptr to a integer on heap. Uses reference counting for cleaning up objects.
-x = make_shared<int>(12);   // Allocate value 12 on heap
-shared_ptr<int> y = x;      // Copy shared_ptr, implicit changes reference count to 2.
-cout << *y;                 // Dereference y to print '12'
-if (y.get() == x.get()) {   // Raw pointers (here x == y)
-    cout << "Same";  
-}  
-y.reset();                  // Eliminate one owner of object
-if (y.get() != x.get()) { 
-    cout << "Different";  
-}  
-if (y == nullptr) {         // Can compare against nullptr (here returns true)
-    cout << "Empty";  
-}  
-y = make_shared<int>(15);   // Assign new value
-cout << *y;                 // Dereference x to print '15'
-cout << *x;                 // Dereference x to print '12'
-weak_ptr<int> w;            // Create empty weak pointer
-w = y;                      // w has weak reference to y.
-if (shared_ptr<int> s = w.lock()) { // Has to be copied into a shared_ptr before usage
-    cout << *s;
-}
-unique_ptr<int> z;          // Create empty unique pointers
-unique_ptr<int> q;
-z = make_unique<int>(16);   // Allocate int (16) on heap. Only one reference allowed.
-q = move(z);                // Move reference from z to q.
-if (z == nullptr){
-    cout << "Z null";
-}
-cout << *q;
-shared_ptr<B> r;
-r = dynamic_pointer_cast<B>(t); // Converts t to a shared_ptr<B>
-
-```
-
 ## `math.h`, `cmath` (floating point math)
 
 ```cpp
@@ -356,43 +317,6 @@ ceil(x); floor(x);          // Round up or down (as a double)
 fabs(x); fmod(x, y);        // Absolute value, x mod y
 ```
 
-## `assert.h`, `cassert` (Debugging Aid)
-
-```cpp
-#include <cassert>        // Include iostream (std namespace)
-assert(e);                // If e is false, print message and abort
-#define NDEBUG            // (before #include <assert.h>), turn off assert
-```
-
-## `iostream.h`, `iostream` (Replaces `stdio.h`)
-
-```cpp
-#include <iostream>         // Include iostream (std namespace)
-cin >> x >> y;              // Read words x and y (any type) from stdin
-cout << "x=" << 3 << endl;  // Write line to stdout
-cerr << x << y << flush;    // Write to stderr and flush
-c = cin.get();              // c = getchar();
-cin.get(c);                 // Read char
-cin.getline(s, n, '\n');    // Read line into char s[n] to '\n' (default)
-if (cin)                    // Good state (not EOF)?
-                            // To read/write any type T:
-istream& operator>>(istream& i, T& x) {i >> ...; x=...; return i;}
-ostream& operator<<(ostream& o, const T& x) {return o << ...;}
-```
-
-## `fstream.h`, `fstream` (File I/O works like `cin`, `cout` as above)
-
-
-```cpp
-#include <fstream>          // Include filestream (std namespace)
-ifstream f1("filename");    // Open text file for reading
-if (f1)                     // Test if open and input available
-    f1 >> x;                // Read object from file
-f1.get(s);                  // Read char or line
-f1.getline(s, n);           // Read line into string s[n]
-ofstream f2("filename");    // Open file for writing
-if (f2) f2 << x;            // Write to file
-```
 
 ## `string` (Variable sized character array)
 
@@ -407,6 +331,8 @@ s1.substr(m, n);          // Substring of size n starting at s1[m]
 s1.c_str();               // Convert to const char*
 s1 = to_string(12.05);    // Converts number to string
 getline(cin, s);          // Read line ending in '\n'
+isalnum(s[i])             // check if a char is alpha numeric
+toupper(s[i])             // converts ch to its uppercase version if it exists
 ```
 
 ## `vector` (Variable sized array/stack with built in memory allocation)
@@ -510,72 +436,4 @@ reverse(a.begin(), a.end()); // Reverse vector or deque
 STL:: find(a.begin(), a.end()) // returns vector
 ```
 
-## `chrono` (Time related library)
-```cpp
-#include <chrono>         // Include chrono
-using namespace std::chrono; // Use namespace
-auto from =               // Get current time_point
-  high_resolution_clock::now();
-// ... do some work       
-auto to =                 // Get current time_point
-  high_resolution_clock::now();
-using ms =                // Define ms as floating point duration
-  duration<float, milliseconds::period>;
-                          // Compute duration in milliseconds
-cout << duration_cast<ms>(to - from)
-  .count() << "ms";
-```
 
-## `thread` (Multi-threading library)
-```cpp
-#include <thread>         // Include thread
-unsigned c = 
-  hardware_concurrency(); // Hardware threads (or 0 for unknown)
-auto lambdaFn = [](){     // Lambda function used for thread body
-    cout << "Hello multithreading";
-};
-thread t(lambdaFn);       // Create and run thread with lambda
-t.join();                 // Wait for t finishes
-
-// --- shared resource example ---
-mutex mut;                         // Mutex for synchronization
-condition_variable cond;           // Shared condition variable
-const char* sharedMes              // Shared resource
-  = nullptr;
-auto pingPongFn =                  // thread body (lambda). Print someone else's message
-  [&](const char* mes){
-    while (true){
-      unique_lock<mutex> lock(mut);// locks the mutex 
-      do {                
-        cond.wait(lock, [&](){     // wait for condition to be true (unlocks while waiting which allows other threads to modify)        
-          return sharedMes != mes; // statement for when to continue
-        });
-      } while (sharedMes == mes);  // prevents spurious wakeup
-      cout << sharedMes << endl;
-      sharedMes = mes;       
-      lock.unlock();               // no need to have lock on notify 
-      cond.notify_all();           // notify all condition has changed
-    }
-  };
-sharedMes = "ping";
-thread t1(pingPongFn, sharedMes);  // start example with 3 concurrent threads
-thread t2(pingPongFn, "pong");
-thread t3(pingPongFn, "boing");
-```
-
-## `future` (thread support library)
-```cpp
-#include <future>         // Include future
-function<int(int)> fib =  // Create lambda function
-  [&](int i){
-    if (i <= 1){
-      return 1;
-    }
-    return fib(i-1) 
-         + fib(i-2);
-  };
-future<int> fut =         // result of async function
-  async(launch::async, fib, 4); // start async function in other thread
-// do some other work 
-cout << fut.get();        // get result of async function. Wait if needed.
-```
